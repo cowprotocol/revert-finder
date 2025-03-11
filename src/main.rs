@@ -68,6 +68,7 @@ async fn main() {
     // searching through the block
     let mut low = 0;
     let mut high = num_txs;
+    let mut target_tx_gas = 0;
     while low <= high {
         let mid = low + (high - low) / 2;
 
@@ -89,17 +90,18 @@ async fn main() {
             .unwrap();
         let res = res.try_into_json_value().unwrap();
         let res = res.as_array().unwrap().first().unwrap();
-        let simulates = res["failed"].as_bool().unwrap();
+        let failed = res["failed"].as_bool().unwrap();
 
-        let label = if simulates { "succeeds" } else { "fails" };
+        let label = if failed { "fails" } else { "succeeds" };
         println!("simulation on index {mid} {label}");
 
-        if simulates {
-            // still works => ignore right half
+        if failed {
+            // tx failed => ignore left half
             low = mid + 1;
         } else {
-            // tx failed => ignore left half
+            // still works => ignore right half
             high = mid - 1;
+            target_tx_gas = res["gas"].as_u64().unwrap() as u128;
         };
     }
 
@@ -110,10 +112,17 @@ async fn main() {
         .await
         .unwrap()
         .unwrap();
+    let rival_tx_receipt = web3
+        .get_transaction_receipt(rival_tx_hash)
+        .await
+        .unwrap()
+        .unwrap();
+    let rival_tx_gas = rival_tx_receipt.gas_used as u128;
     let max_fee_per_gas = rival_tx.max_fee_per_gas();
     let max_priority_fee_per_gas = rival_tx.max_priority_fee_per_gas().unwrap();
     let base_fee = block.header.base_fee_per_gas.unwrap();
-    let final_tip = std::cmp::min(max_priority_fee_per_gas, max_fee_per_gas - base_fee as u128);
+    let final_prio_fee_per_gas =
+        std::cmp::min(max_priority_fee_per_gas, max_fee_per_gas - base_fee as u128);
 
     println!("\n");
     println!("rival tx: {:?}", rival_tx_hash);
@@ -124,5 +133,13 @@ async fn main() {
         max_priority_fee_per_gas as f64 / 1e9
     );
     println!("max_fee: {:?} Gwei", max_fee_per_gas as f64 / 1e9);
-    println!("final tip: {:?} Gwei", final_tip as f64 / 1e9);
+    println!("gas_used: {:?}", target_tx_gas);
+    println!(
+        "final priority_fee_per_gas: {:?} Gwei",
+        final_prio_fee_per_gas as f64 / 1e9
+    );
+    println!(
+        "final total_tip: {:?} ETH",
+        (final_prio_fee_per_gas * rival_tx_gas) as f64 / 1e18
+    );
 }
