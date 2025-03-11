@@ -68,8 +68,8 @@ async fn main() {
     // searching through the block
     let mut low = 0;
     let mut high = num_txs;
-    let mut target_tx_gas = 0;
-    while low <= high {
+    let mut target_tx_gas = None;
+    while low < high {
         let mid = low + (high - low) / 2;
 
         let res = web3
@@ -97,12 +97,17 @@ async fn main() {
 
         if failed {
             // tx failed => ignore higher indices
-            high = mid - 1;
+            high = mid.saturating_sub(1);
         } else {
             // still works => ignore lower indices
             low = mid + 1;
-            target_tx_gas = res["gas"].as_u64().unwrap() as u128;
+            target_tx_gas = Some(res["gas"].as_u64().unwrap() as u128);
         };
+    }
+
+    if target_tx_gas.is_none() {
+        println!("transaction would revert in the entire block");
+        return;
     }
 
     let last_successful_index = high;
