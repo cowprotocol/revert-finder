@@ -96,11 +96,11 @@ async fn main() {
         println!("simulation on index {mid} {label}");
 
         if failed {
-            // tx failed => ignore left half
-            low = mid + 1;
-        } else {
-            // still works => ignore right half
+            // tx failed => ignore higher indices
             high = mid - 1;
+        } else {
+            // still works => ignore lower indices
+            low = mid + 1;
             target_tx_gas = res["gas"].as_u64().unwrap() as u128;
         };
     }
