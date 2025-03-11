@@ -125,7 +125,7 @@ async fn main() {
         std::cmp::min(max_priority_fee_per_gas, max_fee_per_gas - base_fee as u128);
 
     println!("\n");
-    println!("rival tx: {:?}", rival_tx_hash);
+    println!("rival tx: https://etherscan.io/tx/{:?}", rival_tx_hash);
     println!("index: {last_successful_index}");
     println!("base_fee: {:?} Gwei", base_fee as f64 / 1e9);
     println!(
