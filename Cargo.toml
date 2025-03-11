@@ -2,7 +2,7 @@
 name = "revert-finder"
 version = "0.1.0"
 edition = "2024"
-description = "A small helper tool to identify the last transaction index of a given block a target transaction would still have worked. This information can be used to see how much you would have to tip to get that transaction included."
+description = "A small helper tool to identify the last transaction index of a given block a target transaction would still have worked. This information can be used to see how much you would have to tip to get that transaction included. Note that this tool is incompatible with transactions that require an access list to work."
 
 [dependencies]
 alloy = { version = "0.12", features = ["providers"] }
