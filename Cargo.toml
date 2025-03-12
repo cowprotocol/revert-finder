@@ -1,16 +1,17 @@
 [package]
 name = "revert-finder"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 description = "A small helper tool to identify the last transaction index of a given block a target transaction would still have worked. This information can be used to see how much you would have to tip to get that transaction included. Note that this tool is incompatible with transactions that require an access list to work."
 
 [dependencies]
-alloy = { version = "0.12", features = ["providers"] }
+alloy = { version = "0.12", default-features = false, features = ["providers", "rpc-types"] }
 clap = { version = "4.5", features = ["derive", "env"] }
 futures = "0.3"
 hex = "0.4"
-tokio = { version = "1.44", features = ["full"] }
+tokio = { version = "1.44", default-features = false }
 
 [dependencies.alloy-provider]
 version = "0.12"
-features = ["debug-api"]
+default-features = false
+features = ["debug-api", "reqwest"]
