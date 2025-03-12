@@ -9,9 +9,8 @@ alloy = { version = "0.12", default-features = false, features = ["providers", "
 clap = { version = "4.5", features = ["derive", "env"] }
 futures = "0.3"
 hex = "0.4"
-tokio = { version = "1.44", default-features = false }
+tokio = { version = "1.44", default-features = false, features = ["fs"] }
 
 [dependencies.alloy-provider]
 version = "0.12"
-default-features = false
-features = ["debug-api", "reqwest"]
+features = ["debug-api"]
