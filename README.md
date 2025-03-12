@@ -18,3 +18,5 @@ Options:
   -h, --help                 Print help
   -V, --version              Print versio
 ```
+
+This repo also includes a devcontainer that can be used with VSCode or code spaces.
