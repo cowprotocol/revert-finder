@@ -2,9 +2,13 @@ use {
     alloy::{
         consensus::Transaction,
         primitives::{Address, TxKind},
-        providers::{Provider, ProviderBuilder, ext::DebugApi},
+        providers::{ext::DebugApi, Provider, ProviderBuilder},
         rpc::types::{Bundle, StateContext, TransactionRequest},
         transports::http::reqwest::Url,
+    },
+    alloy_rpc_types::trace::geth::{
+        GethDebugBuiltInTracerType, GethDebugTracerConfig, GethDebugTracerType,
+        GethDebugTracingOptions, PreStateConfig,
     },
     clap::Parser,
 };
@@ -122,6 +126,45 @@ async fn main() {
         .await
         .unwrap()
         .unwrap();
+    let coinbase_tip = {
+        let rival_tx_state_diff = web3
+            .debug_trace_transaction(
+                rival_tx_hash,
+                GethDebugTracingOptions {
+                    tracer: Some(GethDebugTracerType::BuiltInTracer(
+                        GethDebugBuiltInTracerType::PreStateTracer,
+                    )),
+                    tracer_config: GethDebugTracerConfig(
+                        serde_json::to_value(PreStateConfig {
+                            diff_mode: Some(true),
+                            disable_code: Some(true),
+                            disable_storage: Some(true),
+                        })
+                        .unwrap(),
+                    ),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap()
+            .try_into_pre_state_frame()
+            .unwrap();
+        let rival_tx_state_diff = rival_tx_state_diff.as_diff().unwrap();
+        let coinbase_balance_pre = rival_tx_state_diff
+            .pre
+            .get(&block.header.beneficiary)
+            .map(|diff| diff.balance)
+            .unwrap_or_default()
+            .unwrap_or_default();
+        let coinbase_balance_post = rival_tx_state_diff
+            .post
+            .get(&block.header.beneficiary)
+            .map(|diff| diff.balance)
+            .unwrap_or_default()
+            .unwrap_or_default();
+        coinbase_balance_post.saturating_sub(coinbase_balance_pre)
+    };
+
     let rival_tx_gas = rival_tx_receipt.gas_used as u128;
     let max_fee_per_gas = rival_tx.max_fee_per_gas();
     let max_priority_fee_per_gas = rival_tx.max_priority_fee_per_gas().unwrap();
@@ -132,6 +175,10 @@ async fn main() {
     println!("\n");
     println!("rival tx: https://etherscan.io/tx/{:?}", rival_tx_hash);
     println!("index: {last_successful_index}");
+    println!(
+        "transfer to builder: {} ETH",
+        f64::from(coinbase_tip) / 1e18
+    );
     println!("base_fee: {:?} Gwei", base_fee as f64 / 1e9);
     println!(
         "max_priority_fee: {:?} Gwei",
@@ -145,6 +192,6 @@ async fn main() {
     );
     println!(
         "final total_tip: {:?} ETH",
-        (final_prio_fee_per_gas * rival_tx_gas) as f64 / 1e18
+        ((final_prio_fee_per_gas * rival_tx_gas) as f64 + f64::from(coinbase_tip)) / 1e18
     );
 }
